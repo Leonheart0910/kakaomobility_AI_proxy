@@ -1,0 +1,10 @@
+version: "2"
+authtoken: 2ZwV9RpyZAn6X2ZdCHQNtmPDBDH_3zJ8uV4nxcA4BNQC8y6XX
+
+tunnels:
+  vite:
+    addr: 5173
+    proto: http
+  api:
+    addr: 3000
+    proto: http

@@ -9,6 +9,16 @@ const cors = require("cors");
 
 const app = express();
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// app.use(
+//   cors({
+//     origin: "*",
+//     methods: ["POST", "GET", "DELETE", "OPTIONS"],
+//   })
+// );
+
 // create audio directory if not exists
 const audioDir = path.join(__dirname, "audio");
 if (!fs.existsSync(audioDir)) {
@@ -149,6 +159,30 @@ app.get("/api/mp3-dummy", (req, res) => {
     res.sendFile(dummyMp3Path);
   } else {
     res.status(404).send("Dummy MP3 file not found");
+  }
+});
+
+app.post("/api/tts", async (req, res) => {
+  try {
+    console.log(req.body);
+
+    const URL = "https://56a2c5f17dd3.ngrok-free.app/chat";
+    const { message } = req.body;
+
+    if (!message) {
+      return res.status(400).send("Missing message parameter");
+    }
+
+    const response = await axios.post(
+      URL,
+      { message },
+      { headers: { "Content-Type": "application/json" }, timeout: 30000 }
+    );
+
+    res.status(response.status).send(response.data);
+  } catch (error) {
+    console.error("TTS Error:", error.message);
+    res.status(500).send(error?.message || "Internal error");
   }
 });
 
