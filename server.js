@@ -164,25 +164,40 @@ app.get("/api/mp3-dummy", (req, res) => {
 
 app.post("/api/tts", async (req, res) => {
   try {
-    console.log(req.body);
-
     const URL = "https://56a2c5f17dd3.ngrok-free.app/chat";
     const { message } = req.body;
+    if (!message) return res.status(400).send("Missing message parameter");
 
-    if (!message) {
-      return res.status(400).send("Missing message parameter");
-    }
-
-    const response = await axios.post(
+    const upstream = await axios.post(
       URL,
-      { message },
-      { headers: { "Content-Type": "application/json" }, timeout: 30000 }
+      {
+        message,
+        is_first_turn: true,
+      },
+      {
+        headers: { "Content-Type": "application/json" },
+        timeout: 60000,
+        responseType: "arraybuffer", // ⭐ nhận raw bytes
+        validateStatus: () => true,
+      }
     );
 
-    res.status(response.status).send(response.data);
+    // Lấy content-type từ upstream (nếu có) hoặc fallback audio/mpeg
+    const ct = upstream.headers["content-type"]?.toLowerCase().includes("audio")
+      ? upstream.headers["content-type"]
+      : "audio/mpeg";
+
+    res.status(upstream.status);
+    res.setHeader("Content-Type", ct);
+    if (upstream.headers["content-length"]) {
+      res.setHeader("Content-Length", upstream.headers["content-length"]);
+    }
+    res.setHeader("Accept-Ranges", "bytes");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    return res.send(Buffer.from(upstream.data));
   } catch (error) {
     console.error("TTS Error:", error.message);
-    res.status(500).send(error?.message || "Internal error");
+    return res.status(500).send(error?.message || "Internal error");
   }
 });
 
