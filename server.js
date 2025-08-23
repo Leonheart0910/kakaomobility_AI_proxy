@@ -5,6 +5,7 @@ const multer = require("multer");
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
+const cors = require("cors");
 
 const app = express();
 
@@ -39,23 +40,31 @@ const upload = multer({
 });
 
 // --- CORS setup ---
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
-  res.header("Access-Control-Allow-Methods", "POST,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") return res.sendStatus(204);
-  next();
-});
+// const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
+// app.use((req, res, next) => {
+//   res.header("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+//   res.header("Access-Control-Allow-Methods", "POST,OPTIONS");
+//   res.header("Access-Control-Allow-Headers", "Content-Type");
+//   if (req.method === "OPTIONS") return res.sendStatus(204);
+//   next();
+// });
+app.use(
+  cors({
+    origin: "*",
+    methods: ["POST", "GET", "DELETE", "OPTIONS"],
+  })
+);
 
 app.post("/api/stt", upload.single("audio"), async (req, res) => {
   let savedFilePath = null;
   try {
     const file = req.file;
-    if (!["Kor", "Eng", "Jpn", "Chn"].includes(req.query.language)) {
+    console.log(req.body.language);
+
+    if (!["Kor", "Eng", "Jpn", "Chn"].includes(req.body.language)) {
       return res.status(400).send("Invalid language parameter");
     }
-    const language = req.query.language || "Kor";
+    const language = req.body.language || "Kor";
     if (!file) return res.status(400).send("Missing audio file");
     savedFilePath = file.path;
     const url = `https://naveropenapi.apigw.ntruss.com/recog/v1/stt?lang=${encodeURIComponent(
@@ -131,6 +140,15 @@ app.delete("/api/audio/:filename", (req, res) => {
   } catch (err) {
     console.error("Delete error:", err.message);
     res.status(500).send("Error deleting file");
+  }
+});
+
+app.get("/api/mp3-dummy", (req, res) => {
+  const dummyMp3Path = path.join(__dirname, "luppy.mp3");
+  if (fs.existsSync(dummyMp3Path)) {
+    res.sendFile(dummyMp3Path);
+  } else {
+    res.status(404).send("Dummy MP3 file not found");
   }
 });
 
